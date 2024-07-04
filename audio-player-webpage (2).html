@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy 3D Multi-Audio Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100%;
+        }
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        .player-box {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        #urlInput {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            resize: vertical;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+        #controls, #speedButtons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        #prevButton { background-color: #f44336; }
+        #nextButton { background-color: #008CBA; }
+        #audioPlayer {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        #currentTrack {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        #playButtonContainer {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="container">
+        <div class="player-box">
+            <h1>Fancy 3D Multi-Audio Player</h1>
+            <textarea id="urlInput" placeholder="Enter audio URLs here, one per line"></textarea>
+            <div id="playButtonContainer"></div>
+            <div id="controls">
+                <button id="prevButton">Previous</button>
+                <button id="nextButton">Next</button>
+            </div>
+            <div id="currentTrack"></div>
+            <audio id="audioPlayer" controls>
+                <source src="" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div id="speedButtons">
+                <button id="normal">Normal</button>
+                <button id="superFast">Super Fast</button>
+                <button id="hyperFast">Hyper Fast</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js background setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const geometry = new THREE.TorusKnotGeometry(10, 3, 100, 16);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+        const torusKnot = new THREE.Mesh(geometry, material);
+        scene.add(torusKnot);
+
+        camera.position.z = 30;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            torusKnot.rotation.x += 0.01;
+            torusKnot.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 3D Play Button setup
+        const playButtonScene = new THREE.Scene();
+        const playButtonCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        const playButtonRenderer = new THREE.WebGLRenderer({ alpha: true });
+        playButtonRenderer.setSize(100, 100);
+        document.getElementById('playButtonContainer').appendChild(playButtonRenderer.domElement);
+
+        const triangleGeometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+            -1, -1, 0,
+            1, 0, 0,
+            -1, 1, 0
+        ]);
+        triangleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        const triangleMaterial = new THREE.MeshBasicMaterial({ color: 0x4CAF50 });
+        const triangle = new THREE.Mesh(triangleGeometry, triangleMaterial);
+        playButtonScene.add(triangle);
+
+        playButtonCamera.position.z = 5;
+
+        function animatePlayButton() {
+            requestAnimationFrame(animatePlayButton);
+            triangle.rotation.y += 0.02;
+            playButtonRenderer.render(playButtonScene, playButtonCamera);
+        }
+        animatePlayButton();
+
+        // Audio player logic
+        const audioPlayer = document.getElementById('audioPlayer');
+        const urlInput = document.getElementById('urlInput');
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+        const currentTrackDisplay = document.getElementById('currentTrack');
+        const playButtonContainer = document.getElementById('playButtonContainer');
+
+        let audioUrls = [];
+        let currentIndex = 0;
+
+        function loadUrls() {
+            audioUrls = urlInput.value.split('\n').filter(url => url.trim() !== '');
+            currentIndex = 0;
+            if (audioUrls.length > 0) {
+                loadAudio(audioUrls[currentIndex]);
+                updateUrlInput();
+            }
+        }
+
+        function loadAudio(url) {
+            audioPlayer.src = url;
+            audioPlayer.play();
+            updateCurrentTrackDisplay();
+        }
+
+        function updateUrlInput() {
+            urlInput.value = audioUrls.map((_, index) => `Link${index + 1}`).join('\n');
+        }
+
+        function updateCurrentTrackDisplay() {
+            currentTrackDisplay.textContent = `Now playing: Link${currentIndex + 1}`;
+        }
+
+        playButtonContainer.addEventListener('click', function() {
+            if (audioUrls.length === 0) {
+                loadUrls();
+            } else if (audioPlayer.paused) {
+                audioPlayer.play();
+            } else {
+                audioPlayer.pause();
+            }
+        });
+
+        prevButton.addEventListener('click', function() {
+            if (audioUrls.length > 0) {
+                currentIndex = (currentIndex - 1 + audioUrls.length) % audioUrls.length;
+                loadAudio(audioUrls[currentIndex]);
+            }
+        });
+
+        nextButton.addEventListener('click', function() {
+            if (audioUrls.length > 0) {
+                currentIndex = (currentIndex + 1) % audioUrls.length;
+                loadAudio(audioUrls[currentIndex]);
+            }
+        });
+
+        document.getElementById('normal').addEventListener('click', function () {
+            audioPlayer.playbackRate = 1;
+        });
+
+        document.getElementById('superFast').addEventListener('click', function () {
+            audioPlayer.playbackRate = 2.5;
+        });
+
+        document.getElementById('hyperFast').addEventListener('click', function () {
+            audioPlayer.playbackRate = 3;
+        });
+
+        // Check if there's a URL in the query string
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlFromParams = urlParams.get('url');
+        if (urlFromParams) {
+            urlInput.value = urlFromParams;
+            loadUrls();
+        }
+    </script>
+</body>
+</html>
